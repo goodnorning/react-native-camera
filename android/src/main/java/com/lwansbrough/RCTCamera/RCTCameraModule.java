@@ -5,16 +5,26 @@
 
 package com.lwansbrough.RCTCamera;
 
+import android.app.Activity;
+import android.Manifest;
 import android.content.ContentValues;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.*;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Surface;
+
+import com.facebook.react.bridge.Callback;
+import com.facebook.react.modules.core.PermissionAwareActivity;
+import com.facebook.react.modules.core.PermissionListener;
 
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
@@ -24,6 +34,8 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.lwansbrough.RCTCamera.permission.PermissionManager;
+import com.lwansbrough.RCTCamera.permission.PermissionUtils;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -36,8 +48,52 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 public class RCTCameraModule extends ReactContextBaseJavaModule
-    implements MediaRecorder.OnInfoListener, MediaRecorder.OnErrorListener, LifecycleEventListener {
+        implements MediaRecorder.OnInfoListener, 
+        MediaRecorder.OnErrorListener, 
+        LifecycleEventListener{
     private static final String TAG = "RCTCameraModule";
+
+    private static Callback permissionCallback;
+    @ReactMethod
+    public void requestPermission(Callback callback){
+        permissionCallback = callback;
+        final Activity activity = getCurrentActivity();
+        if(activity == null){
+            callback.invoke(false);
+            return;
+        }
+        if(!PermissionManager.hasPermission(_reactContext, Manifest.permission.CAMERA)){
+            //PermissionManager.requestPermissions(getCurrentActivity(),new String[]{Manifest.permission.CAMERA},0);
+            PermissionManager.requestPermissions(
+                    activity,
+                    new String[]{Manifest.permission.CAMERA},
+                    1,
+                    new PermissionListener() {
+                        @Override
+                        public boolean onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                            Log.i("PermissionManager","requestPermissions : requestCode="+requestCode+",permission="+grantResults.toString());
+                            if (requestCode == 1) {
+                                for (int grantResult : grantResults) {
+                                    Log.i("PermissionManager","requestPermissions : requestCode="+requestCode+",permission="+grantResult);
+                                    if (grantResult == PackageManager.PERMISSION_DENIED) {
+                                        permissionCallback.invoke(false);
+                                        return true;
+                                    }
+                                }
+
+                                permissionCallback.invoke(true);
+                            }
+
+                            return true;
+                        }
+                    }
+            );
+
+            return;
+        }
+
+        permissionCallback.invoke(true);
+    }
 
     public static final int RCT_CAMERA_ASPECT_FILL = 0;
     public static final int RCT_CAMERA_ASPECT_FIT = 1;
@@ -87,6 +143,7 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
         _reactContext = reactContext;
         _sensorOrientationChecker = new RCTSensorOrientationChecker(_reactContext);
         _reactContext.addLifecycleEventListener(this);
+
     }
 
     public static ReactApplicationContext getReactContextSingleton() {
@@ -645,6 +702,7 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
             }
         }
     }
+
 
     @ReactMethod
     public void stopCapture(final Promise promise) {

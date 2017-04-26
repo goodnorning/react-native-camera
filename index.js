@@ -7,6 +7,8 @@ import {
   StyleSheet,
   requireNativeComponent,
   View,
+  TouchableOpacity,
+  Text,
 } from 'react-native';
 
 const CameraManager = NativeModules.CameraManager || NativeModules.CameraModule;
@@ -144,13 +146,14 @@ export default class Camera extends Component {
     super();
     this.state = {
       isAuthorized: false,
-      isRecording: false
+      isRecording: false,
+      hasPermission: false,
     };
   }
 
   async componentWillMount() {
     this._addOnBarCodeReadListener()
-
+    this._requestPermission()
     let { captureMode } = convertNativeProps({ captureMode: this.props.captureMode })
     let hasVideoAndAudio = this.props.captureAudio && captureMode === Camera.constants.CaptureMode.video
     let check = hasVideoAndAudio ? Camera.checkDeviceAuthorizationStatus : Camera.checkVideoAuthorizationStatus;
@@ -160,10 +163,19 @@ export default class Camera extends Component {
       this.setState({ isAuthorized });
     }
   }
-
+  _requestPermission(){
+    if (Platform.OS === 'android') {
+      CameraManager.requestPermission(hasPermission=>{
+        console.log('PermissionManager====='+hasPermission)
+        this.setState({hasPermission})
+      })
+    }else{
+      this.setState({hasPermission:true})
+    }
+    
+  }
   componentWillUnmount() {
     this._removeOnBarCodeReadListener()
-
     if (this.state.isRecording) {
       this.stopCapture();
     }
@@ -196,7 +208,14 @@ export default class Camera extends Component {
   render() {
     const style = [styles.base, this.props.style];
     const nativeProps = convertNativeProps(this.props);
-
+    
+    if(Platform.OS === 'android' && !this.state.hasPermission){
+      return (
+        <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
+          <TouchableOpacity onPress={()=>this._requestPermission()}><Text>{'点击获取权限'}</Text></TouchableOpacity>
+        </View>
+      )
+    }
     return <RCTCamera ref={CAMERA_REF} {...nativeProps} />;
   }
 

@@ -4,16 +4,26 @@
 
 package com.lwansbrough.RCTCamera;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
+
+import com.facebook.react.bridge.ActivityEventListener;
+import com.lwansbrough.RCTCamera.permission.PermissionManager;
+import com.lwansbrough.RCTCamera.permission.PermissionUtils;
+import com.lwansbrough.RCTCamera.permission.PermissionUtils.PermissionGrant;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.lang.Math;
-
-public class RCTCamera {
+// implements ActivityCompat.OnRequestPermissionsResultCallback
+public class RCTCamera{
     private static RCTCamera ourInstance;
     private final HashMap<Integer, CameraInfoWrapper> _cameraInfos;
     private final HashMap<Integer, Integer> _cameraTypeToIndex;
@@ -31,11 +41,66 @@ public class RCTCamera {
         return ourInstance;
     }
     public static void createInstance(int deviceOrientation) {
+
         ourInstance = new RCTCamera(deviceOrientation);
     }
+/*
+    private static PermissionUtils.PermissionGrant mPermissionGrant = new PermissionUtils.PermissionGrant() {
+        @Override
+        public void onPermissionGranted(int requestCode) {
+            switch (requestCode) {
+                case PermissionUtils.CODE_RECORD_AUDIO:
+                    //Toast.makeText(context, "Result Permission Grant CODE_RECORD_AUDIO", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_GET_ACCOUNTS:
+                    //Toast.makeText(context, "Result Permission Grant CODE_GET_ACCOUNTS", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_READ_PHONE_STATE:
+                    //Toast.makeText(context, "Result Permission Grant CODE_READ_PHONE_STATE", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_CALL_PHONE:
+                    //Toast.makeText(context, "Result Permission Grant CODE_CALL_PHONE", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_CAMERA:
+                    //Toast.makeText(context, "Result Permission Grant CODE_CAMERA", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_ACCESS_FINE_LOCATION:
+                    //Toast.makeText(context, "Result Permission Grant CODE_ACCESS_FINE_LOCATION", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_ACCESS_COARSE_LOCATION:
+                    //Toast.makeText(context, "Result Permission Grant CODE_ACCESS_COARSE_LOCATION", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_READ_EXTERNAL_STORAGE:
+                    //Toast.makeText(context, "Result Permission Grant CODE_READ_EXTERNAL_STORAGE", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_WRITE_EXTERNAL_STORAGE:
+                    //Toast.makeText(context, "Result Permission Grant CODE_WRITE_EXTERNAL_STORAGE", Toast.LENGTH_SHORT).show();
+                    break;
+                case PermissionUtils.CODE_MULTI_PERMISSION:
+                    //Toast.makeText(context, "Result All Permission Grant", Toast.LENGTH_SHORT).show();
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
+        PermissionManager.onRequestPermissionsResult(getCurrentActivity(),requestCode,permissions,grantResults);
+    }*/
     public synchronized Camera acquireCameraInstance(int type) {
+/*
+        if (PermissionManager.hasPermission(context, Manifest.permission.CAMERA)){
+            return getCamera(type);
+        }else{
+            PermissionManager.requestPermissions(getCurrentActivity(),new String[]{Manifest.permission.CAMERA},0);
+        }
+*/
+        return getCamera(type);
+    }
+    private Camera getCamera(int type){
         if (null == _cameras.get(type) && null != _cameraTypeToIndex.get(type)) {
             try {
                 Camera camera = Camera.open(_cameraTypeToIndex.get(type));
@@ -47,7 +112,6 @@ public class RCTCamera {
         }
         return _cameras.get(type);
     }
-
     public void releaseCameraInstance(int type) {
         // Release seems async and creates race conditions. Remove from map first before releasing.
         Camera releasingCamera = _cameras.get(type);
@@ -419,6 +483,7 @@ public class RCTCamera {
     }
 
     private RCTCamera(int deviceOrientation) {
+
         _cameras = new HashMap<>();
         _cameraInfos = new HashMap<>();
         _cameraTypeToIndex = new HashMap<>();
@@ -442,6 +507,7 @@ public class RCTCamera {
             }
         }
     }
+
 
     private class CameraInfoWrapper {
         public final Camera.CameraInfo info;
