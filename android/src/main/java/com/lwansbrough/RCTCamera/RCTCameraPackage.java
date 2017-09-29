@@ -17,7 +17,8 @@ public class RCTCameraPackage implements ReactPackage {
         return Collections.<NativeModule>singletonList(new RCTCameraModule(reactApplicationContext));
     }
 
-    @Override
+    //@Override
+    //deprecated by RN0.47
     public List<Class<? extends JavaScriptModule>> createJSModules() {
         return Collections.emptyList();
     }
